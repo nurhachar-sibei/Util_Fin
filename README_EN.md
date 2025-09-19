@@ -2,7 +2,11 @@
 
 ## Project Overview
 
+<<<<<<< HEAD
 This project provides a  covariance matrix calculation utility class `Cov_Matrix` that supports multiple covariance matrix calculation methods, suitable for financial risk management, portfolio optimization, and other scenarios.
+=======
+This project provides a powerful covariance matrix calculation utility class `Cov_Matrix` that supports multiple covariance matrix calculation methods, suitable for financial risk management, portfolio optimization, and other scenarios.
+>>>>>>> 5394b82c8c463ce904dbdbe427bedf15be07b2ac
 
 ## Features
 
