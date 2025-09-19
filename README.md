@@ -136,13 +136,6 @@ semi_cov = cov_semi.calculate_cal_cov_matrix()
 - 金融衍生品定价
 - 压力测试和情景分析
 
-## 许可证
-
-本项目采用开源许可证，具体请查看 LICENSE 文件。
-
-## 贡献
-
-欢迎提交 Issue 和 Pull Request 来改进本项目。
 
 ---
 
