@@ -104,7 +104,6 @@ class Cov_Matrix():
     def calculate_EWMA_Semi_cov_matrix(self,ret_,frequency):   
         def _is_positive_semidefinite(matrix):
             try:
-                # Significantly more efficient than checking eigenvalues (stackoverflow.com/questions/16266720)
                 np.linalg.cholesky(matrix + 1e-16 * np.eye(len(matrix)))
                 return True
             except np.linalg.LinAlgError:
@@ -116,12 +115,9 @@ class Cov_Matrix():
                 "The covariance matrix is non positive semidefinite. Amending eigenvalues."
             )
 
-            # Eigendecomposition
             q, V = np.linalg.eigh(matrix)
             if fix_method == "spectral":
-                # Remove negative eigenvalues
                 q = np.where(q > 0, q, 0)
-                # Reconstruct matrix
                 fixed_matrix = V @ np.diag(q) @ V.T
             elif fix_method == "diag":
                 min_eig = np.min(q)
@@ -129,12 +125,11 @@ class Cov_Matrix():
             else:
                 raise NotImplementedError("Method {} not implemented".format(fix_method))
 
-            if not _is_positive_semidefinite(fixed_matrix):  # pragma: no cover
+            if not _is_positive_semidefinite(fixed_matrix):  
                 warnings.warn(
                     "Could not fix matrix. Please try a different risk model.", UserWarning
                 )
 
-            # Rebuild labels if provided
             if isinstance(matrix, pd.DataFrame):
                 tickers = matrix.index
                 return pd.DataFrame(fixed_matrix, index=tickers, columns=tickers)
