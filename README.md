@@ -2,11 +2,11 @@
 
 ## 项目简介
 
-本项目是一个综合性的金融分析工具集，从最初的波动率计算工具进化而来，现已扩展为包含多种金融分析功能的完整工具包。项目包含协方差矩阵计算和主成分分析(PCA)两大核心模块，适用于金融风险管理、投资组合优化、量化分析等多种场景。
+本项目是一个综合性的金融分析工具集，从最初的波动率计算工具进化而来，现已扩展为包含多种金融分析功能的完整工具包。项目包含协方差矩阵计算、主成分分析(PCA)、策略评价分析和仓位管理四大核心模块，适用于金融风险管理、投资组合优化、量化分析等多种场景。
 
 ## 项目演进历程
 
-本项目最初专注于波动率计算，提供了多种协方差矩阵计算方法。随着金融分析需求的不断发展，项目逐步扩展，增加了主成分分析功能，形成了更加完整的金融分析工具生态系统。
+本项目最初专注于波动率计算，提供了多种协方差矩阵计算方法。随着金融分析需求的不断发展，项目逐步扩展，增加了主成分分析功能、策略评价分析工具和仓位管理工具，形成了更加完整的金融分析工具生态系统。
 
 ## 核心模块
 
@@ -17,6 +17,14 @@
 ### 2. PCA分析器 (PCAanalysis.py)
 
 全功能的主成分分析工具，支持多时间序列的降维分析和可视化。
+
+### 3. 策略评价分析工具 (Eval_util.py)
+
+提供全面的投资策略回测评价指标计算和风险分析功能。
+
+### 4. 仓位管理工具 (Position_util.py)
+
+提供灵活的仓位调整和时间管理功能，支持多种调仓策略。
 
 ## 功能特性
 
@@ -44,6 +52,28 @@
 - **可视化分析**: 方差解释图、成分热力图、双标图等
 - **结果导出**: 支持多种格式的结果导出
 - **重构误差**: 模型质量评估
+
+### 策略评价分析工具 (Eval_util.py)
+
+提供全面的投资策略回测评价功能：
+
+- **基础指标计算**: 累计收益率、年化收益率、年化波动率、最大回撤
+- **风险调整指标**: 夏普比率、卡玛比率等
+- **滚动分析**: 滚动累计收益率、滚动回撤分析
+- **VaR风险分析**: 历史模拟法计算风险价值(VaR)
+- **分年度分析**: 按年度统计各项风险收益指标
+- **投资规模计算**: 基于风险控制的最大投资规模计算
+- **结果导出**: 支持Excel格式的详细分析报告
+
+### 仓位管理工具 (Position_util.py)
+
+提供灵活的仓位调整和时间管理功能：
+
+- **多种调仓模式**: 支持固定日期调仓和固定间隔调仓
+- **时间序列处理**: 自动处理开仓、平仓时间范围
+- **调仓日期生成**: 智能生成调仓时间点
+- **数据筛选**: 根据调仓策略筛选相关数据
+- **灵活配置**: 支持年度、月度、周度、日度等多种调仓频率
 
 ## 依赖库
 
@@ -121,6 +151,48 @@ pca_analyzer.plot_biplot()
 
 # 导出结果
 pca_analyzer.export_results('pca_results.xlsx')
+```
+
+### 策略评价分析
+
+```python
+import pandas as pd
+from Eval_util import get_eval_indicator, Year_analysis
+
+# 准备收益率数据
+returns_data = pd.DataFrame(...)  # 您的策略收益率数据
+
+# 计算基础评价指标
+eval_indicators = get_eval_indicator(returns_data)
+print(eval_indicators)
+
+# 进行年度分析（包含VaR分析）
+annual_analysis = Year_analysis(returns_data, dafult_VaR_year_windows=5, save_=True)
+```
+
+### 仓位管理
+
+```python
+import pandas as pd
+from Position_util import Position_info
+
+# 准备数据
+total_df = pd.DataFrame(...)  # 您的收益率数据
+start_date = '2020-01-01'
+end_date = '2023-12-31'
+
+# 创建仓位管理实例
+position_manager = Position_info(
+    total_df=total_df,
+    start_date=start_date,
+    end_date=end_date,
+    change_time_delta=20,  # 每20个交易日调仓
+    initial_month=1,
+    initial_day=1
+)
+
+# 获取调仓信息
+position_df, change_position_df, change_dates = position_manager.position_information()
 ```
 
 ### 不同方法示例
@@ -224,11 +296,14 @@ semi_cov = cov_semi.calculate_cal_cov_matrix()
 - 多因子模型构建
 - 降维分析
 - 数据探索性分析
+- 策略回测评价
+- 投资绩效分析
 
 ### 金融建模
 - 衍生品定价
 - 风险模型构建
 - 市场微观结构分析
+- 仓位管理优化
 
 ## 项目结构
 
@@ -236,6 +311,8 @@ semi_cov = cov_semi.calculate_cal_cov_matrix()
 Util_Fin/
 ├── PCAanalysis.py      # PCA分析器主模块
 ├── Volatility_util.py  # 协方差矩阵计算工具
+├── Eval_util.py        # 策略评价分析工具
+├── Position_util.py    # 仓位管理工具
 ├── README.md          # 中文说明文档
 └── README_EN.md       # 英文说明文档
 ```
@@ -245,6 +322,7 @@ Util_Fin/
 - **v1.0**: 基础波动率计算工具
 - **v2.0**: 增加多种协方差矩阵计算方法
 - **v3.0**: 新增PCA分析功能，形成完整的金融分析工具集
+- **v4.0**: 新增策略评价分析和仓位管理功能，构建全面的量化分析平台
 
 
 ---

@@ -2,11 +2,11 @@
 
 ## Project Overview
 
-This project is a comprehensive financial analysis toolkit that has evolved from an initial volatility calculation tool. It now encompasses a complete suite of financial analysis capabilities, including covariance matrix calculations and Principal Component Analysis (PCA). The toolkit is designed for financial risk management, portfolio optimization, quantitative analysis, and various other financial applications.
+This project is a comprehensive financial analysis toolkit that has evolved from an initial volatility calculation tool. It now encompasses a complete suite of financial analysis capabilities, including covariance matrix calculations, Principal Component Analysis (PCA), strategy evaluation analysis, and position management. The toolkit is designed for financial risk management, portfolio optimization, quantitative analysis, and various other financial applications.
 
 ## Evolution History
 
-This project initially focused on volatility calculations, providing multiple covariance matrix calculation methods. As financial analysis requirements continued to evolve, the project gradually expanded to include Principal Component Analysis functionality, forming a more complete financial analysis ecosystem.
+This project initially focused on volatility calculations, providing multiple covariance matrix calculation methods. As financial analysis requirements continued to evolve, the project gradually expanded to include Principal Component Analysis functionality, strategy evaluation analysis tools, and position management tools, forming a more complete financial analysis ecosystem.
 
 ## Core Modules
 
@@ -17,6 +17,14 @@ Provides multiple covariance matrix calculation methods, serving as a fundamenta
 ### 2. PCA Analyzer (PCAanalysis.py)
 
 A full-featured Principal Component Analysis tool supporting dimensionality reduction analysis and visualization for multiple time series.
+
+### 3. Strategy Evaluation Analysis Tool (Eval_util.py)
+
+Provides comprehensive investment strategy backtesting evaluation metrics calculation and risk analysis functionality.
+
+### 4. Position Management Tool (Position_util.py)
+
+Provides flexible position adjustment and time management functionality, supporting multiple rebalancing strategies.
 
 ## Features
 
@@ -44,6 +52,28 @@ Provides comprehensive Principal Component Analysis functionality:
 - **Visualization**: Explained variance plots, component heatmaps, biplots, etc.
 - **Results Export**: Support for multiple output formats
 - **Reconstruction Error**: Model quality assessment
+
+### Strategy Evaluation Analysis Tool (Eval_util.py)
+
+Provides comprehensive investment strategy backtesting evaluation functionality:
+
+- **Basic Metrics Calculation**: Cumulative returns, annualized returns, annualized volatility, maximum drawdown
+- **Risk-Adjusted Metrics**: Sharpe ratio, Calmar ratio, etc.
+- **Rolling Analysis**: Rolling cumulative returns, rolling drawdown analysis
+- **VaR Risk Analysis**: Value at Risk (VaR) calculation using historical simulation method
+- **Annual Analysis**: Annual risk-return metrics statistics
+- **Investment Scale Calculation**: Maximum investment scale calculation based on risk control
+- **Results Export**: Detailed analysis reports in Excel format
+
+### Position Management Tool (Position_util.py)
+
+Provides flexible position adjustment and time management functionality:
+
+- **Multiple Rebalancing Modes**: Support for fixed-date rebalancing and fixed-interval rebalancing
+- **Time Series Processing**: Automatic handling of opening and closing time ranges
+- **Rebalancing Date Generation**: Intelligent generation of rebalancing time points
+- **Data Filtering**: Data filtering based on rebalancing strategies
+- **Flexible Configuration**: Support for annual, monthly, weekly, daily, and other rebalancing frequencies
 
 ## Dependencies
 
@@ -121,6 +151,48 @@ pca_analyzer.plot_biplot()
 
 # Export results
 pca_analyzer.export_results('pca_results.xlsx')
+```
+
+### Strategy Evaluation Analysis
+
+```python
+import pandas as pd
+from Eval_util import get_eval_indicator, Year_analysis
+
+# Prepare returns data
+returns_data = pd.DataFrame(...)  # Your strategy returns data
+
+# Calculate basic evaluation indicators
+eval_indicators = get_eval_indicator(returns_data)
+print(eval_indicators)
+
+# Perform annual analysis (including VaR analysis)
+annual_analysis = Year_analysis(returns_data, dafult_VaR_year_windows=5, save_=True)
+```
+
+### Position Management
+
+```python
+import pandas as pd
+from Position_util import Position_info
+
+# Prepare data
+total_df = pd.DataFrame(...)  # Your returns data
+start_date = '2020-01-01'
+end_date = '2023-12-31'
+
+# Create position management instance
+position_manager = Position_info(
+    total_df=total_df,
+    start_date=start_date,
+    end_date=end_date,
+    change_time_delta=20,  # Rebalance every 20 trading days
+    initial_month=1,
+    initial_day=1
+)
+
+# Get rebalancing information
+position_df, change_position_df, change_dates = position_manager.position_information()
 ```
 
 ### Examples with Different Methods
@@ -224,11 +296,14 @@ This project is released under an open-source license. Please refer to the LICEN
 - Multi-factor model construction
 - Dimensionality reduction analysis
 - Exploratory data analysis
+- Strategy backtesting evaluation
+- Investment performance analysis
 
 ### Financial Modeling
 - Derivatives pricing
 - Risk model construction
 - Market microstructure analysis
+- Position management optimization
 
 ## Project Structure
 
@@ -236,6 +311,8 @@ This project is released under an open-source license. Please refer to the LICEN
 Util_Fin/
 ├── PCAanalysis.py      # PCA analyzer main module
 ├── Volatility_util.py  # Covariance matrix calculation utility
+├── Eval_util.py        # Strategy evaluation analysis tool
+├── Position_util.py    # Position management tool
 ├── README.md          # Chinese documentation
 └── README_EN.md       # English documentation
 ```
@@ -245,6 +322,7 @@ Util_Fin/
 - **v1.0**: Basic volatility calculation tool
 - **v2.0**: Added multiple covariance matrix calculation methods
 - **v3.0**: Added PCA analysis functionality, forming a complete financial analysis toolkit
+- **v4.0**: Added strategy evaluation analysis and position management functionality, building a comprehensive quantitative analysis platform
 
 ---
 
