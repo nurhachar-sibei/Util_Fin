@@ -1,12 +1,28 @@
-# 协方差矩阵计算工具 (Volatility_util.py)
+# 金融分析工具集 (Util_Fin)
 
 ## 项目简介
 
-本项目提供了一个协方差矩阵计算工具类 `Cov_Matrix`，支持多种协方差矩阵计算方法，适用于金融风险管理、投资组合优化等场景。
+本项目是一个综合性的金融分析工具集，从最初的波动率计算工具进化而来，现已扩展为包含多种金融分析功能的完整工具包。项目包含协方差矩阵计算和主成分分析(PCA)两大核心模块，适用于金融风险管理、投资组合优化、量化分析等多种场景。
+
+## 项目演进历程
+
+本项目最初专注于波动率计算，提供了多种协方差矩阵计算方法。随着金融分析需求的不断发展，项目逐步扩展，增加了主成分分析功能，形成了更加完整的金融分析工具生态系统。
+
+## 核心模块
+
+### 1. 协方差矩阵计算工具 (Volatility_util.py)
+
+提供多种协方差矩阵计算方法，是风险管理和投资组合优化的基础工具。
+
+### 2. PCA分析器 (PCAanalysis.py)
+
+全功能的主成分分析工具，支持多时间序列的降维分析和可视化。
 
 ## 功能特性
 
-### 支持的协方差矩阵计算方法
+### 协方差矩阵计算 (Volatility_util.py)
+
+支持9种不同的协方差矩阵计算方法：
 
 1. **样本协方差 (ALL)** - 传统的样本协方差矩阵计算
 2. **半衰协方差 (HALF)** - 基于时间衰减权重的协方差计算
@@ -18,41 +34,93 @@
 8. **半协方差 (SEMI)** - 下行风险的半协方差矩阵
 9. **EWMA半协方差 (EWMA_SEMI)** - 指数加权移动平均半协方差矩阵
 
+### PCA分析器 (PCAanalysis.py)
+
+提供完整的主成分分析功能：
+
+- **数据预处理**: 自动标准化和数据验证
+- **PCA分解**: 灵活的主成分数量设置
+- **统计指标**: 方差解释比、累积方差比、特征贡献度等
+- **可视化分析**: 方差解释图、成分热力图、双标图等
+- **结果导出**: 支持多种格式的结果导出
+- **重构误差**: 模型质量评估
+
 ## 依赖库
 
 ```python
+# 基础数据处理
 import pandas as pd
 import numpy as np
-from sklearn.datasets import load_iris
+
+# 机器学习和统计
 from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
+from sklearn.datasets import load_iris
+from sklearn.covariance import LedoitWolf
+
+# 金融建模
 from arch import arch_model
 from pypfopt.risk_models import semicovariance
-from sklearn.covariance import LedoitWolf
+
+# 可视化
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# 其他
 from scipy import stats
+from typing import Optional, Union, List, Tuple, Dict
 ```
 
 ## 安装依赖
 
 ```bash
-pip install pandas numpy scikit-learn arch pypfopt scipy
+pip install pandas numpy scikit-learn matplotlib seaborn arch pypfopt scipy
 ```
 
 ## 使用方法
 
-### 基本用法
+### 协方差矩阵计算
 
 ```python
 import pandas as pd
 from Volatility_util import Cov_Matrix
 
-# 准备收益率数据 (DataFrame格式)
+# 准备收益率数据
 returns_data = pd.DataFrame(...)  # 您的收益率数据
 
 # 创建协方差矩阵计算实例
 cov_calculator = Cov_Matrix(ret=returns_data, method='ALL')
 
-# 计算协方差矩阵 (默认年化频率为252)
+# 计算协方差矩阵
 cov_matrix = cov_calculator.calculate_cal_cov_matrix(frequency=252)
+```
+
+### PCA分析
+
+```python
+import pandas as pd
+from PCAanalysis import PCAAnalyzer
+
+# 准备数据
+data = pd.DataFrame(...)  # 您的时间序列数据
+
+# 创建PCA分析器
+pca_analyzer = PCAAnalyzer(standardize=True, n_components=None)
+
+# 拟合模型
+pca_analyzer.fit(data)
+
+# 获取分析结果
+explained_variance = pca_analyzer.get_explained_variance_ratio()
+components_matrix = pca_analyzer.get_components_matrix()
+
+# 可视化分析
+pca_analyzer.plot_explained_variance()
+pca_analyzer.plot_components_heatmap()
+pca_analyzer.plot_biplot()
+
+# 导出结果
+pca_analyzer.export_results('pca_results.xlsx')
 ```
 
 ### 不同方法示例
@@ -123,18 +191,60 @@ semi_cov = cov_semi.calculate_cal_cov_matrix()
 
 ## 注意事项
 
-1. 输入数据应为收益率格式的 pandas DataFrame
-2. 确保数据中无缺失值或已妥善处理
-3. GARCH 方法计算时间较长，适用于较小规模的数据集
-4. 半协方差方法需要输入价格数据而非收益率数据
+1. 输入数据应为适当格式的 pandas DataFrame
+2. 确保数据质量，处理缺失值和异常值
+3. GARCH 方法计算时间较长，适用于中小规模数据集
+4. PCA分析前建议进行数据标准化
+5. 根据具体应用场景选择合适的协方差计算方法
+
+## 贡献指南
+
+欢迎提交问题报告、功能请求或代码贡献。请确保：
+- 代码符合项目风格
+- 添加适当的文档和注释
+- 包含必要的测试用例
+
+## 许可证
+
+本项目采用开源许可证，详情请参考项目根目录下的LICENSE文件。
 
 ## 应用场景
 
-- 投资组合风险管理
-- 资产配置优化
-- 风险模型构建
-- 金融衍生品定价
+### 风险管理
+- 投资组合风险评估
 - 压力测试和情景分析
+- 风险因子识别
+
+### 投资组合优化
+- 资产配置优化
+- 风险平价策略
+- 因子投资
+
+### 量化分析
+- 多因子模型构建
+- 降维分析
+- 数据探索性分析
+
+### 金融建模
+- 衍生品定价
+- 风险模型构建
+- 市场微观结构分析
+
+## 项目结构
+
+```
+Util_Fin/
+├── PCAanalysis.py      # PCA分析器主模块
+├── Volatility_util.py  # 协方差矩阵计算工具
+├── README.md          # 中文说明文档
+└── README_EN.md       # 英文说明文档
+```
+
+## 版本历史
+
+- **v1.0**: 基础波动率计算工具
+- **v2.0**: 增加多种协方差矩阵计算方法
+- **v3.0**: 新增PCA分析功能，形成完整的金融分析工具集
 
 
 ---
