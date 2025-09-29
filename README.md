@@ -62,6 +62,7 @@
 - **滚动分析**: 滚动累计收益率、滚动回撤分析
 - **VaR风险分析**: 历史模拟法计算风险价值(VaR)
 - **分年度分析**: 按年度统计各项风险收益指标
+- **分月度分析**: 按月度统计各项风险收益指标，包括月度胜率计算
 - **投资规模计算**: 基于风险控制的最大投资规模计算
 - **结果导出**: 支持Excel格式的详细分析报告
 
@@ -157,7 +158,7 @@ pca_analyzer.export_results('pca_results.xlsx')
 
 ```python
 import pandas as pd
-from Eval_util import get_eval_indicator, Year_analysis
+from Eval_util import get_eval_indicator, Year_analysis, Month_analysis
 
 # 准备收益率数据
 returns_data = pd.DataFrame(...)  # 您的策略收益率数据
@@ -168,6 +169,9 @@ print(eval_indicators)
 
 # 进行年度分析（包含VaR分析）
 annual_analysis = Year_analysis(returns_data, dafult_VaR_year_windows=5, save_=True)
+
+# 进行月度分析（包含VaR分析和月度胜率）
+monthly_analysis = Month_analysis(returns_data, dafult_VaR_year_windows=5, save_=True)
 ```
 
 ### 仓位管理

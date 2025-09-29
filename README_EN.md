@@ -62,6 +62,7 @@ Provides comprehensive investment strategy backtesting evaluation functionality:
 - **Rolling Analysis**: Rolling cumulative returns, rolling drawdown analysis
 - **VaR Risk Analysis**: Value at Risk (VaR) calculation using historical simulation method
 - **Annual Analysis**: Annual risk-return metrics statistics
+- **Monthly Analysis**: Monthly risk-return metrics statistics, including monthly win rate calculation
 - **Investment Scale Calculation**: Maximum investment scale calculation based on risk control
 - **Results Export**: Detailed analysis reports in Excel format
 
@@ -157,7 +158,7 @@ pca_analyzer.export_results('pca_results.xlsx')
 
 ```python
 import pandas as pd
-from Eval_util import get_eval_indicator, Year_analysis
+from Eval_util import get_eval_indicator, Year_analysis, Month_analysis
 
 # Prepare returns data
 returns_data = pd.DataFrame(...)  # Your strategy returns data
@@ -168,6 +169,9 @@ print(eval_indicators)
 
 # Perform annual analysis (including VaR analysis)
 annual_analysis = Year_analysis(returns_data, dafult_VaR_year_windows=5, save_=True)
+
+# Perform monthly analysis (including VaR analysis and monthly win rate)
+monthly_analysis = Month_analysis(returns_data, dafult_VaR_year_windows=5, save_=True)
 ```
 
 ### Position Management

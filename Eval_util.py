@@ -231,7 +231,7 @@ def calculate_annual_metrics_with_var(returns_df,dafult_VaR_year_windows):
         max_loss_inyear = forecast_max_investment_95*year_start_to_min_drawdown
         annual_results.append({
             '年度': year,
-            '年化收益率': f"{annualized_return:.4f}",
+            '区间收益率': f"{annualized_return:.4f}",
             '年化波动率': f"{annualized_volatility:.4f}",
             '最大回撤': f"{max_drawdown:.4f}",
             '夏普比率': f"{sharpe_ratio:.4f}",
@@ -282,7 +282,7 @@ def Year_analysis(ret_df,dafult_VaR_year_windows=5,save_=True):
         # 创建格式化的显示表格
         print("\n年度分析结果:")
         print("-" * 150)
-        print(f"{'年度':<6} {'年化收益率':<10} {'最大回撤':<10} {'年初最低回撤':<12} {'基于回撤额度':<15} {'年化波动率':<10} {'夏普比率':<10} {'卡玛比率':<10}")
+        print(f"{'年度':<6} {'区间收益率':<10} {'最大回撤':<10} {'年初最低回撤':<12} {'基于回撤额度':<15} {'年化波动率':<10} {'夏普比率':<10} {'卡玛比率':<10}")
         print(f"{'':6} {'预计95%VaR':<12} {'预计95%规模':<15}")
         print("-" * 150)
         
@@ -330,3 +330,220 @@ def Year_analysis(ret_df,dafult_VaR_year_windows=5,save_=True):
             print(f"平均夏普比率: {avg_sharpe:.4f}")
             print(f"平均卡玛比率: {avg_calmar:.4f}")
         return(annual_metrics)
+
+def calculate_monthly_metrics_with_var(returns_df, dafult_VaR_year_windows):
+    """
+    计算月度风险收益指标，包括预计VaR
+    """
+    # 确保日期列为datetime格式
+    if 'date' in returns_df.columns:
+        returns_df['date'] = pd.to_datetime(returns_df['date'])
+        returns_df.set_index('date', inplace=True)
+    elif returns_df.index.dtype != 'datetime64[ns]':
+        returns_df.index = pd.to_datetime(returns_df.index)
+    
+    # 获取收益率列（假设第一列是收益率）
+    returns_col = returns_df.columns[0]
+    returns = returns_df[returns_col]
+    
+    # 计算每日过去250天的回撤率
+    print("正在计算每日过去250天的回撤率...")
+    draw_df = calculate_past_250_drawdown(returns)
+    
+    # 保存回撤数据到draw.xlsx
+    draw_df.to_excel('./excel/draw.xlsx', index=False)
+    print("回撤数据已保存到draw.xlsx")
+    
+    # 按月分组
+    monthly_results = []
+    # 创建年月组合用于分组
+    returns_with_month = returns.copy()
+    returns_with_month.index = pd.to_datetime(returns_with_month.index)
+    monthly_groups = returns_with_month.groupby([returns_with_month.index.year, returns_with_month.index.month])
+    
+    for (year, month), month_returns in monthly_groups:
+        print(f"正在分析 {year}年{month}月...")
+        
+        if len(month_returns) == 0:
+            continue
+            
+        # 1.1 月度收益率（区间收益率）
+        cumulative_return = (1 + month_returns).prod() - 1
+        trading_days = len(month_returns)
+        # 年化收益率（基于月度收益率）
+        if trading_days > 0:
+            annualized_return = (1 + cumulative_return) ** (252 / trading_days) - 1
+        else:
+            annualized_return = 0
+
+        # 2. 最大回撤
+        cumulative_wealth = (1 + month_returns).cumprod()
+        running_max = cumulative_wealth.expanding().max()
+        drawdown = (cumulative_wealth - running_max) / running_max
+        max_drawdown = drawdown.min()
+        
+        # 2.1 计算月初到最低点回撤
+        month_start_value = 1.0  # 月初净值设为1
+        cumulative_returns = (1 + month_returns).cumprod()
+        min_value = cumulative_returns.min()  # 月内最低净值
+        month_start_to_min_drawdown = (min_value - month_start_value) / month_start_value
+        # 如果回撤大于0，则设为0
+        month_start_to_min_drawdown = min(month_start_to_min_drawdown, 0)
+        
+        # 基于月初到最低点回撤计算最大投资额度
+        max_loss_limit_drawdown = 200000000  # 2亿最大亏损额
+        if month_start_to_min_drawdown == 0:
+            max_investment_by_drawdown = "无限制"  # 回撤为0时无投资额度限制
+        else:
+            max_investment_by_drawdown = max_loss_limit_drawdown / abs(month_start_to_min_drawdown)
+        
+        # 3. 年化波动率
+        annualized_volatility = month_returns.std() * np.sqrt(252)
+        # 3.1 期间波动率
+        period_volatility = month_returns.std() * np.sqrt(len(month_returns))
+        
+        # 4. 夏普比率（假设无风险利率为0%）
+        risk_free_rate = 0
+        sharpe_ratio = (annualized_return - risk_free_rate) / annualized_volatility if annualized_volatility != 0 else 0
+        
+        # 5. 卡玛比率（Calmar Ratio）
+        calmar_ratio = annualized_return / abs(max_drawdown) if max_drawdown != 0 else 0
+        
+        # 6. 预计VaR计算（95%）
+        # 使用该月之前的样本
+        current_date = pd.Timestamp(year, month, 1)
+        prior_draw_data = draw_df[draw_df['date'] < current_date]['past_250_draw']
+        if len(prior_draw_data) >= 252*dafult_VaR_year_windows:
+            # 取最近的样本
+            forecast_sample = prior_draw_data.tail(252*dafult_VaR_year_windows)
+        else:
+            # 如果不足，使用所有可用样本
+            forecast_sample = prior_draw_data
+        
+        forecast_var_95 = calculate_var_historical(forecast_sample, confidence_level=0.95)
+        
+        # 7. 计算最大投资规模
+        max_loss_limit = 200_000_000  # 2亿
+        
+        # 预计最大投资规模（95%）
+        if pd.notna(forecast_var_95):
+            if forecast_var_95 >= 0:
+                forecast_max_investment_95 = "无限制"  # VaR为正时无规模限制
+            else:
+                forecast_max_investment_95 = max_loss_limit / abs(forecast_var_95)
+        else:
+            forecast_max_investment_95 = np.nan
+        
+        if isinstance(forecast_max_investment_95, (int, float)) and pd.notna(forecast_max_investment_95):
+            max_loss_inmonth = forecast_max_investment_95 * month_start_to_min_drawdown
+        else:
+            max_loss_inmonth = np.nan
+            
+        monthly_results.append({
+            '年月': f"{year}-{month:02d}",
+            '区间收益率': f"{cumulative_return:.4f}",
+            '年化收益率': f"{annualized_return:.4f}",
+            '年化波动率': f"{annualized_volatility:.4f}",
+            '最大回撤': f"{max_drawdown:.4f}",
+            '夏普比率': f"{sharpe_ratio:.4f}",
+            '卡玛比率': f"{calmar_ratio:.4f}",
+            '预计95%VaR': f"{forecast_var_95:.6f}" if pd.notna(forecast_var_95) else "NaN",
+            '预计95%投资规模(万元)': f"{forecast_max_investment_95/10000:.2f}" if isinstance(forecast_max_investment_95, (int, float)) and pd.notna(forecast_max_investment_95) else forecast_max_investment_95 if forecast_max_investment_95 == "无限制" else "NaN",
+            '月初到最低点回撤': f"{month_start_to_min_drawdown:.4f}",
+            "月内最大亏损额(万元)": f"{max_loss_inmonth/10000:.2f}" if isinstance(max_loss_inmonth, (int, float)) and pd.notna(max_loss_inmonth) else "NaN"
+        })
+    
+    return pd.DataFrame(monthly_results)
+
+def Month_analysis(ret_df, dafult_VaR_year_windows=5, save_=True):
+    """
+    按月分析净值表现的工具函数
+    """
+    # 尝试不同的读取方式
+    df = pd.DataFrame(ret_df)        
+    print(f"数据读取成功，共{len(df)}行数据")
+    print(f"列名: {list(df.columns)}")
+    print("\n前5行数据:")
+    print(df.head())
+    
+    # 数据预处理
+    # 如果第一列是日期，第二列是收益率
+    if len(df.columns) >= 2:
+        df.columns = ['date', 'returns'] + list(df.columns[2:])
+    elif len(df.columns) == 1:
+        # 如果只有一列，假设索引是日期
+        df.columns = ['returns']
+    
+    # 删除空值
+    df = df.dropna()
+    
+    print(f"\n数据清洗后，共{len(df)}行有效数据")
+    
+    # 计算月度指标（包括VaR分析）
+    print("\n开始计算月度风险收益指标和VaR分析...")
+    monthly_metrics = calculate_monthly_metrics_with_var(df, dafult_VaR_year_windows)
+    
+    # 显示结果
+    print("\n=== 策略月度风险收益分析结果（含VaR分析）===")
+    # 设置pandas显示选项以获得更好的格式
+    pd.set_option('display.max_columns', None)
+    pd.set_option('display.width', 300)
+    pd.set_option('display.max_colwidth', 15)
+    
+    # 确保没有重复行
+    monthly_metrics = monthly_metrics.drop_duplicates().reset_index(drop=True)
+    
+    # 创建格式化的显示表格
+    print("\n月度分析结果:")
+    print("-" * 150)
+    print(f"{'年月':<8} {'区间收益率':<10} {'年化收益率':<10} {'最大回撤':<10} {'月初最低回撤':<12} {'年化波动率':<10} {'夏普比率':<10} {'卡玛比率':<10}")
+    print(f"{'':8} {'预计95%VaR':<12} {'预计95%规模':<15}")
+    print("-" * 150)
+    
+    for _, row in monthly_metrics.iterrows():
+        print(f"{row['年月']:<8} {row['区间收益率']:<10} {row['年化收益率']:<10} {row['最大回撤']:<10} {row['月初到最低点回撤']:<12} {row['年化波动率']:<10} {row['夏普比率']:<10} {row['卡玛比率']:<10}")
+        print(f"{'':8} {row['预计95%VaR']:<12} {row['预计95%投资规模(万元)']:<15}")
+        print()
+    
+    print("-" * 150)
+    
+    # 保存结果到Excel
+    if save_ == True:
+        filename = input("输出文件名:")
+        output_file = f'Analysis_Results_monthly_{filename.split(".")[0]}.xlsx'
+        monthly_metrics.to_excel('./excel/'+output_file, index=False)
+        print(f"\n结果已保存到: {output_file}")
+    
+    # 计算整体统计
+    print("\n=== 整体统计摘要 ===")
+    if len(monthly_metrics) > 0:
+        # 转换数值列进行统计
+        numeric_cols = ['区间收益率', '年化收益率', '最大回撤', '月初到最低点回撤', '年化波动率', '夏普比率', '卡玛比率']
+        for col in numeric_cols:
+            monthly_metrics[col] = pd.to_numeric(monthly_metrics[col], errors='coerce')
+        
+        # 计算平均值
+        avg_period_return = monthly_metrics['区间收益率'].mean() * 100
+        avg_annual_return = monthly_metrics['年化收益率'].mean() * 100
+        avg_max_drawdown = monthly_metrics['最大回撤'].mean() * 100
+        avg_month_start_drawdown = monthly_metrics['月初到最低点回撤'].mean() * 100
+        avg_volatility = monthly_metrics['年化波动率'].mean() * 100
+        avg_sharpe = monthly_metrics['夏普比率'].mean()
+        avg_calmar = monthly_metrics['卡玛比率'].mean()
+        
+        print("\n整体统计摘要:")
+        print(f"平均月度收益率: {avg_period_return:.2f}%")
+        print(f"平均年化收益率: {avg_annual_return:.2f}%")
+        print(f"平均最大回撤: {avg_max_drawdown:.2f}%")
+        print(f"平均月初到最低点回撤: {avg_month_start_drawdown:.2f}%")
+        print(f"平均年化波动率: {avg_volatility:.2f}%")
+        print(f"平均夏普比率: {avg_sharpe:.4f}")
+        print(f"平均卡玛比率: {avg_calmar:.4f}")
+        
+        # 计算月度胜率
+        positive_months = (monthly_metrics['区间收益率'] > 0).sum()
+        total_months = len(monthly_metrics)
+        win_rate = positive_months / total_months * 100 if total_months > 0 else 0
+        print(f"月度胜率: {win_rate:.2f}% ({positive_months}/{total_months})")
+        
+    return monthly_metrics
