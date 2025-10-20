@@ -22,6 +22,7 @@ def setup_logger(log_file: str = "RP_model",file_load = './log', level=logging.I
     import os
     caller_frame = inspect.stack()[1]
     caller_file = caller_frame.filename 
+
     logger = logging.getLogger(os.path.basename(caller_file)[:-3])
     return logger
 
