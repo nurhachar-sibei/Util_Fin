@@ -12,9 +12,9 @@ from scipy import stats
 
 class Cov_Matrix():
     def __init__(self,ret,method):
-        self.cal_df = ret
+        self.cal_df = ret 
         self.method = method
-    
+
     #协方差计算方法：
     #样本协方差计算
     def calculate_cov_matrix(self,df,frequency):
@@ -101,9 +101,10 @@ class Cov_Matrix():
         pv = (ret_+1).cumprod()
         semi_cov = semicovariance(pv,benchmark=0,frequency=frequency) #注意simi函数中输入的是price
         return  np.matrix(semi_cov)
-    def calculate_EWMA_Semi_cov_matrix(self,ret_,frequency):   
+    def calculate_EWMA_Semi_cov_matrix(self,ret_,frequency,lambda_=0.84):   
         def _is_positive_semidefinite(matrix):
             try:
+                # Significantly more efficient than checking eigenvalues (stackoverflow.com/questions/16266720)
                 np.linalg.cholesky(matrix + 1e-16 * np.eye(len(matrix)))
                 return True
             except np.linalg.LinAlgError:
@@ -115,9 +116,12 @@ class Cov_Matrix():
                 "The covariance matrix is non positive semidefinite. Amending eigenvalues."
             )
 
+            # Eigendecomposition
             q, V = np.linalg.eigh(matrix)
             if fix_method == "spectral":
+                # Remove negative eigenvalues
                 q = np.where(q > 0, q, 0)
+                # Reconstruct matrix
                 fixed_matrix = V @ np.diag(q) @ V.T
             elif fix_method == "diag":
                 min_eig = np.min(q)
@@ -125,11 +129,12 @@ class Cov_Matrix():
             else:
                 raise NotImplementedError("Method {} not implemented".format(fix_method))
 
-            if not _is_positive_semidefinite(fixed_matrix):  
+            if not _is_positive_semidefinite(fixed_matrix):  # pragma: no cover
                 warnings.warn(
                     "Could not fix matrix. Please try a different risk model.", UserWarning
                 )
 
+            # Rebuild labels if provided
             if isinstance(matrix, pd.DataFrame):
                 tickers = matrix.index
                 return pd.DataFrame(fixed_matrix, index=tickers, columns=tickers)
@@ -137,11 +142,11 @@ class Cov_Matrix():
                 return fixed_matrix
         
         drops = np.fmin(ret_ - 0, 0)
-        M_1 = self.calculate_EWMA_cov_matrix(drops,frequency)
+        M_1 = self.calculate_EWMA_cov_matrix(drops,frequency,lambda_=lambda_)
         M_1 = fix_nonpositive_semidefinite(M_1)
         return np.matrix(M_1)
     #协方差计算方式选择
-    def calculate_cal_cov_matrix(self,frequency=252):
+    def calculate_cal_cov_matrix(self,frequency=252,lambda_ = 0.94):
         method = self.method
         if method == 'ALL': #ALL 表示普通协方差
             self.cal_cov_matrix = self.calculate_cov_matrix(self.cal_df,frequency=frequency)
@@ -149,16 +154,16 @@ class Cov_Matrix():
             self.cal_cov_matrix = self.calculate_half_cov_matrix(self.cal_df,frequency=frequency)
         elif method=='DIAG': #DIAG表示对角协方差
             self.cal_cov_matrix = self.calculate_diag_cov_matrix(self.cal_df,frequency=frequency)
-        elif method=='SPRING':
+        elif method=='SPRING': #压缩协方差
             self.cal_cov_matrix = self.calculate_spring_cov_matrix(self.cal_df,frequency=frequency)
-        elif method=='THRESH':
+        elif method=='THRESH': 
             self.cal_cov_matrix = self.calculate_threshold_cov_matrix(self.cal_df,frequency=frequency)
         elif method=='EWMA':
-            self.cal_cov_matrix = self.calculate_EWMA_cov_matrix(self.cal_df,frequency=frequency)
+            self.cal_cov_matrix = self.calculate_EWMA_cov_matrix(self.cal_df,frequency=frequency,lambda_=lambda_)
         elif method=='GARCH':
             self.cal_cov_matrix = self.calculate_GARCH_cov_matrix(self.cal_df,frequency=frequency)
         elif method=='SEMI':
             self.cal_cov_matrix = self.calculate_semi_cov_matrix(self.cal_df,frequency=frequency)
         elif method=='EWMA_SEMI':
-            self.cal_cov_matrix = self.calculate_EWMA_Semi_cov_matrix(self.cal_df,frequency=frequency)
+            self.cal_cov_matrix = self.calculate_EWMA_Semi_cov_matrix(self.cal_df,frequency=frequency,lambda_=lambda_)
         return self.cal_cov_matrix
