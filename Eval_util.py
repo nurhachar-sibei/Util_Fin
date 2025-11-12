@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 import os
-import Wind_util
+from Util_Fin import Wind_util
 from scipy import stats
 import warnings
 warnings.filterwarnings('ignore')
