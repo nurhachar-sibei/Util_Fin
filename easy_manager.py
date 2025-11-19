@@ -17,19 +17,20 @@ from functools import wraps
 from typing import Union, List, Dict, Optional, Any
 from pathlib import Path
 import warnings
+from Util_Fin import logger_util
 
 print("Easy Manager is running...")
 # 配置日志
 # 配置日志格式，使其更符合用户要求的格式
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s | %(levelname)s | %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
-    handlers=[
-        logging.FileHandler('datadeal.log', encoding='utf-8'),
-        logging.StreamHandler()
-    ]
-)
+# logging.basicConfig(
+#     level=logging.INFO,
+#     format='%(asctime)s | %(levelname)s | %(message)s',
+#     datefmt='%Y-%m-%d %H:%M:%S',
+#     handlers=[
+#         logging.FileHandler('datadeal.log', encoding='utf-8'),
+#         logging.StreamHandler()
+#     ]
+# )
 
 def function_timer(func):
     """
@@ -37,7 +38,7 @@ def function_timer(func):
     """
     @wraps(func)
     def wrapper(*args, **kwargs):
-        logger = logging.getLogger(__name__)
+        logger = logger_util.setup_logger('datadeal','./')
         logger.info(f'[Function: {func.__name__} started...]')
         start_time = time.time()
         
@@ -78,7 +79,7 @@ class EasyManager:
             host: 主机地址
             port: 端口号
         """
-        self.logger = logging.getLogger(__name__)
+        self.logger = logger_util.setup_logger("datadeal",'./')
         self.db_config = {
             'database': database,
             'user': user,
