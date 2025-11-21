@@ -1,0 +1,62 @@
+2025-11-19 13:59:44,810 - datadeal_20251119 - INFO - 数据库连接成功: macro_data_base
+2025-11-19 13:59:44,810 - datadeal_20251119 - INFO - [Function: load_table started...]
+2025-11-19 13:59:44,816 - datadeal_20251119 - INFO - 成功从表 raw_macro_data_m 加载数据，形状: (10, 13)
+2025-11-19 13:59:44,816 - datadeal_20251119 - INFO - [Function: load_table completed, elapsed time: 0.01s]
+2025-11-19 13:59:44,825 - datadeal_20251119 - INFO - 数据库连接已关闭
+2025-11-19 13:59:50,213 - datadeal_20251119 - INFO - 数据库连接成功: macro_data_base
+2025-11-19 13:59:50,213 - datadeal_20251119 - INFO - [Function: load_table started...]
+2025-11-19 13:59:50,221 - datadeal_20251119 - ERROR - 加载表 raw_macro_data_m 失败: 错误:  LIMIT后的值不能为负数
+
+2025-11-19 13:59:50,222 - datadeal_20251119 - ERROR - 详细错误信息: Traceback (most recent call last):
+  File "d:\anaconda\Lib\site-packages\Util_Fin\easy_manager.py", line 653, in load_table
+    self.cursor.execute(query)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^
+  File "D:\anaconda\Lib\site-packages\psycopg2\extras.py", line 236, in execute
+    return super().execute(query, vars)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+psycopg2.errors.InvalidRowCountInLimitClause: 错误:  LIMIT后的值不能为负数
+
+
+2025-11-19 13:59:50,223 - datadeal_20251119 - INFO - [Function: load_table completed, elapsed time: 0.01s]
+2025-11-19 13:59:50,223 - datadeal_20251119 - INFO - 数据库连接已关闭
+2025-11-19 14:03:31,708 - datadeal_20251119 - INFO - 数据库连接成功: macro_data_base
+2025-11-19 14:03:31,708 - datadeal_20251119 - INFO - [Function: load_table started...]
+2025-11-19 14:03:31,714 - datadeal_20251119 - INFO - 获取最后 10 行数据（总行数: 232）
+2025-11-19 14:03:31,715 - datadeal_20251119 - INFO - 成功从表 raw_macro_data_m 加载数据，形状: (10, 13)
+2025-11-19 14:03:31,715 - datadeal_20251119 - INFO - [Function: load_table completed, elapsed time: 0.01s]
+2025-11-19 14:03:31,724 - datadeal_20251119 - INFO - 数据库连接已关闭
+2025-11-19 15:14:14,406 - datadeal_20251119 - INFO - 数据库连接成功: macro_data_base
+2025-11-19 15:14:14,407 - datadeal_20251119 - INFO - [Function: load_table started...]
+2025-11-19 15:14:14,418 - datadeal_20251119 - INFO - 选择列: ['M0000273', 'M0017126'] (共 2 列)
+2025-11-19 15:14:14,418 - datadeal_20251119 - WARNING - 排序列 'index' 不在选择的列中，将临时包含用于排序
+2025-11-19 15:14:14,418 - datadeal_20251119 - INFO - 按列 'index' 升序排序
+2025-11-19 15:14:14,419 - datadeal_20251119 - INFO - 获取最后 10 行数据（总行数: 233）
+2025-11-19 15:14:14,420 - datadeal_20251119 - INFO - 成功从表 raw_macro_data_m 加载数据，形状: (10, 2)
+2025-11-19 15:14:14,420 - datadeal_20251119 - INFO - [Function: load_table completed, elapsed time: 0.01s]
+2025-11-19 15:14:14,425 - datadeal_20251119 - INFO - 数据库连接已关闭
+2025-11-19 15:16:54,558 - datadeal_20251119 - INFO - 数据库连接成功: macro_data_base
+2025-11-19 15:16:54,559 - datadeal_20251119 - INFO - [Function: load_table started...]
+2025-11-19 15:16:54,571 - datadeal_20251119 - INFO - 选择列: ['index', 'M0000273', 'M0017126'] (共 3 列)
+2025-11-19 15:16:54,571 - datadeal_20251119 - INFO - 按列 'index' 升序排序
+2025-11-19 15:16:54,572 - datadeal_20251119 - INFO - 获取最后 10 行数据（总行数: 233）
+2025-11-19 15:16:54,574 - datadeal_20251119 - INFO - 成功从表 raw_macro_data_m 加载数据，形状: (10, 3)
+2025-11-19 15:16:54,574 - datadeal_20251119 - INFO - [Function: load_table completed, elapsed time: 0.02s]
+2025-11-19 15:16:54,581 - datadeal_20251119 - INFO - 数据库连接已关闭
+2025-11-19 15:24:42,100 - datadeal_20251119 - INFO - 数据库连接成功: macro_data_base
+2025-11-19 15:24:42,101 - datadeal_20251119 - INFO - [Function: load_table started...]
+2025-11-19 15:24:42,110 - datadeal_20251119 - ERROR - 加载表 raw_macro_data_m 失败: can only concatenate list (not "NoneType") to list
+2025-11-19 15:24:42,111 - datadeal_20251119 - ERROR - 详细错误信息: Traceback (most recent call last):
+  File "d:\anaconda\Lib\site-packages\Util_Fin\easy_manager.py", line 661, in load_table
+    columns = ['index']+columns
+              ~~~~~~~~~^~~~~~~~
+TypeError: can only concatenate list (not "NoneType") to list
+
+2025-11-19 15:24:42,111 - datadeal_20251119 - INFO - [Function: load_table completed, elapsed time: 0.01s]
+2025-11-19 15:24:42,111 - datadeal_20251119 - INFO - 数据库连接已关闭
+2025-11-19 15:25:28,161 - datadeal_20251119 - INFO - 数据库连接成功: macro_data_base
+2025-11-19 15:25:28,161 - datadeal_20251119 - INFO - [Function: load_table started...]
+2025-11-19 15:25:28,170 - datadeal_20251119 - INFO - 按列 'index' 升序排序
+2025-11-19 15:25:28,170 - datadeal_20251119 - INFO - 获取最后 10 行数据（总行数: 233）
+2025-11-19 15:25:28,172 - datadeal_20251119 - INFO - 成功从表 raw_macro_data_m 加载数据，形状: (10, 14)
+2025-11-19 15:25:28,172 - datadeal_20251119 - INFO - [Function: load_table completed, elapsed time: 0.01s]
+2025-11-19 15:25:28,183 - datadeal_20251119 - INFO - 数据库连接已关闭

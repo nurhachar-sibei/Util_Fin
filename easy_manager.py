@@ -366,7 +366,7 @@ class EasyManager:
             # 按索引合并数据
             if merge_on_index and index_name:
                 # 加载现有数据
-                existing_df = self.load_table(table_name)
+                existing_df = self.load_table(table_name,limit=-10)
                 
                 if existing_df is not None and not existing_df.empty:
                     self.logger.info(f"按索引列 '{index_name}' 合并数据")
@@ -473,7 +473,7 @@ class EasyManager:
                     self.logger.error("skip 模式需要有索引列，但未找到索引")
                     return False
                 
-                existing_df = self.load_table(table_name)
+                existing_df = self.load_table(table_name,limit=-80)
                 
                 if existing_df is not None and not existing_df.empty:
                     # 检查索引列是否存在
@@ -508,7 +508,7 @@ class EasyManager:
                     self.logger.error("update 模式需要有索引列，但未找到索引")
                     return False
                 
-                existing_df = self.load_table(table_name)
+                existing_df = self.load_table(table_name,limit=-80)
                 
                 if existing_df is None or existing_df.empty:
                     self.logger.info(f"表为空，直接插入 {len(df)} 行数据")
@@ -618,13 +618,25 @@ class EasyManager:
             return False
     
     @function_timer
-    def load_table(self, table_name: str, limit: Optional[int] = None) -> Optional[pd.DataFrame]:
+    def load_table(self, table_name: str, limit: Optional[int] = None,
+                   order_by: Optional[str] = 'index', ascending: bool = True,
+                   columns: Optional[List[str]] = None) -> Optional[pd.DataFrame]:
         """
         从数据库导入表格到Python
         
         Args:
             table_name: 表名
             limit: 限制返回行数（可选）
+                  - 正数: 返回前N行
+                  - 负数: 返回后N行（例如 -10 返回最后10行）
+                  - None: 返回所有行
+            order_by: 排序列名（可选），例如 'datetime' 或 'price'，默认为'index'
+            ascending: 是否升序排序（默认True）
+                      - True: 升序（ASC）
+                      - False: 降序（DESC）
+            columns: 要获取的列名列表（可选）
+                    - None: 获取所有列（默认）
+                    - ['col1', 'col2']: 只获取指定的列
             
         Returns:
             pandas DataFrame 或 None
@@ -644,10 +656,82 @@ class EasyManager:
                 self.logger.error(f"表 {table_name} 不存在")
                 return None
             
+            # 获取表的所有列名
+            table_columns = self._get_table_columns(table_name)
+            # 处理要选择的列
+            select_clause = "*"
+            if columns is not None:
+                if not isinstance(columns, list):
+                    self.logger.error(f"columns 参数必须是列表类型，当前类型: {type(columns)}")
+                    return None
+                
+                if len(columns) == 0:
+                    self.logger.error("columns 参数不能是空列表")
+                    return None
+                
+                # 清理并验证列名
+                cleaned_columns = []
+                invalid_columns = []
+                columns = ['index']+columns
+                for col in columns:
+                    col_clean = self._clean_column_name(col)
+                    if col_clean in table_columns:
+                        cleaned_columns.append(f'"{col_clean}"')
+                    else:
+                        invalid_columns.append(col)
+                
+                if invalid_columns:
+                    self.logger.error(f"以下列不存在于表中: {invalid_columns}")
+                    self.logger.info(f"可用的列: {table_columns}")
+                    return None
+                
+                select_clause = ", ".join(cleaned_columns)
+                self.logger.info(f"选择列: {columns} (共 {len(columns)} 列)")
+            
+            # 如果指定了排序列，验证列是否存在
+            if order_by:
+                # 清理列名（处理特殊字符）
+                order_by_clean = self._clean_column_name(order_by)
+                
+                if order_by_clean not in table_columns:
+                    self.logger.error(f"排序列 '{order_by}' (清理后: '{order_by_clean}') 不存在于表中")
+                    self.logger.info(f"可用的列: {table_columns}")
+                    return None
+                
+                # 如果指定了 columns 且排序列不在其中，需要临时包含排序列
+                if columns is not None:
+                    columns_clean = [self._clean_column_name(col) for col in columns]
+                    if order_by_clean not in columns_clean:
+                        self.logger.warning(f"排序列 '{order_by_clean}' 不在选择的列中，将临时包含用于排序")
+                        # 注意：这里不修改 select_clause，因为我们可以在 ORDER BY 中使用不在 SELECT 中的列
+            
+            # 构建ORDER BY子句
+            order_clause = ""
+            if order_by:
+                order_by_clean = self._clean_column_name(order_by)
+                order_direction = "ASC" if ascending else "DESC"
+                order_clause = f' ORDER BY "{order_by_clean}" {order_direction}'
+                self.logger.info(f"按列 '{order_by_clean}' {'升序' if ascending else '降序'}排序")
+            
             # 构建查询
-            query = f"SELECT * FROM {table_name}"
-            if limit:
-                query += f" LIMIT {limit}"
+            if limit is not None and limit < 0:
+                # 负数：获取最后 N 行
+                # 先获取总行数
+                self.cursor.execute(f"SELECT COUNT(*) as total FROM {table_name}")
+                total_rows = self.cursor.fetchone()['total']
+                
+                # 计算 OFFSET
+                offset = max(0, total_rows + limit)  # limit是负数，所以相当于 total_rows - abs(limit)
+                actual_limit = min(abs(limit), total_rows)
+                
+                query = f"SELECT {select_clause} FROM {table_name}{order_clause} OFFSET {offset} LIMIT {actual_limit}"
+                self.logger.info(f"获取最后 {abs(limit)} 行数据（总行数: {total_rows}）")
+            elif limit is not None and limit > 0:
+                # 正数：获取前 N 行
+                query = f"SELECT {select_clause} FROM {table_name}{order_clause} LIMIT {limit}"
+            else:
+                # None 或 0：获取所有行
+                query = f"SELECT {select_clause} FROM {table_name}{order_clause}"
             
             # 执行查询
             self.cursor.execute(query)
@@ -944,9 +1028,20 @@ class EasyManager:
         • append - 直接追加，不检查重复
      └─ 示例: em.insert_data('my_table', df, mode='skip')
 
-  4. load_table(table_name, limit=None)
+  4. load_table(table_name, limit=None, order_by='index', ascending=True, columns=None)  ⭐⭐ 全功能版
      └─ 从数据库导入表到 Python
-     └─ 示例: df = em.load_table('my_table', limit=100)
+     └─ limit参数: 正数=前N行, 负数=后N行, None=全部
+     └─ order_by参数: 指定排序列名（默认'index'）
+     └─ ascending参数: True=升序, False=降序
+     └─ columns参数: 指定要获取的列（列表），None=全部列
+     └─ 示例: 
+        • df = em.load_table('my_table', limit=100)                              # 前100行
+        • df = em.load_table('my_table', limit=-50)                              # 最后50行
+        • df = em.load_table('my_table', order_by='datetime')                    # 按日期升序
+        • df = em.load_table('my_table', order_by='price', ascending=False)      # 按价格降序
+        • df = em.load_table('my_table', columns=['datetime', 'price'])          # 只获取指定列
+        • df = em.load_table('my_table', limit=10, order_by='datetime', 
+                            ascending=False, columns=['datetime', 'company', 'price'])  # 组合使用
 
   5. drop_table(table_name)
      └─ 删除表
@@ -995,8 +1090,14 @@ class EasyManager:
       em.insert_data('stocks', df, mode='update')  # 覆盖重复数据
       em.insert_data('stocks', df, mode='append')  # 直接追加
       
-      # 5. 导入表
-      df_loaded = em.load_table('stocks')
+      # 5. 导入表（支持排序、限制和列选择）
+      df_loaded = em.load_table('stocks')                           # 全部数据
+      df_top10 = em.load_table('stocks', limit=10)                  # 前10行
+      df_last10 = em.load_table('stocks', limit=-10)                # 最后10行
+      df_sorted = em.load_table('stocks', order_by='datetime')      # 按日期排序
+      df_cols = em.load_table('stocks', columns=['datetime', 'price', 'volume'])  # 只获取特定列
+      df_latest = em.load_table('stocks', limit=10, order_by='datetime', 
+                                ascending=False, columns=['datetime', 'price'])  # 组合使用
       
       # 6. 查询表信息
       tables = em.list_tables()
@@ -1012,6 +1113,8 @@ class EasyManager:
   • skip 和 update 模式需要 DataFrame 有索引列
   • 列名中的特殊字符（., -, 空格）会自动转换为 _
   • 所有操作记录在 datadeal.log 文件中
+  • columns 参数可以减少数据传输量，提高大表查询性能
+  • 如果排序列不在 columns 中，仍可正常排序（但排序列不会出现在结果中）
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -1554,7 +1657,7 @@ class LongManager(EasyManager):
 # 使用示例
 if __name__ == "__main__":
     # 创建管理器实例
-    with EasyManager() as em:
+    with EasyManager(database='macro_data_base') as em:
         # 列出所有表
-        tables = em.list_tables()
+        tables = em.load_table('raw_macro_data_m',limit=-10)
         print("现有表:", tables)
