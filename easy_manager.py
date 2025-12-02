@@ -97,8 +97,10 @@ class EasyManager:
         try:
             self.conn = psycopg2.connect(**self.db_config)
             self.cursor = self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            self.logger.info("="*50)
             self.logger.info(f"数据库连接成功: {self.db_config['database']}")
         except Exception as e:
+            self.logger.info("="*50)
             self.logger.error(f"数据库连接失败: {str(e)}")
             raise
     
@@ -1135,6 +1137,7 @@ class EasyManager:
         if self.conn:
             self.conn.close()
         self.logger.info("数据库连接已关闭")
+        self.logger.info("="*50)
     
     def __enter__(self):
         return self
