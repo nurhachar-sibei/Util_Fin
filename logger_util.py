@@ -1,3 +1,7 @@
+'''
+本模块用于设置日志记录器，支持多个独立的日志记录器
+'''
+
 import logging
 from datetime import datetime
 

@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 # coding: utf-8
-
+'''
+本模块用于从Wind数据库中获取股票、基金、指数等资产的历史价格数据,目前已经暂停更新，请基于easy_manager 编写更加自由的更新脚本
+'''
 
 from operator import index
 from turtle import update

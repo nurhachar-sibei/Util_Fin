@@ -1,3 +1,6 @@
+'''
+本模块用于获取调仓日信息、调仓后持有的日期等
+'''
 import pandas as pd
 import numpy as np
 

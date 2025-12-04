@@ -1,3 +1,7 @@
+'''
+本脚本用于计算并可视化不同lambda值下EWMA模型的权重分布
+'''
+
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt

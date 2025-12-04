@@ -1,3 +1,7 @@
+'''
+本模块是RP模型的V2.3,如有需求，可以使用更加详细的V3模型
+'''
+
 import importlib
 import pandas as pd
 import numpy as np

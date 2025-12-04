@@ -1,3 +1,7 @@
+'''
+本模块用于对多事件序列进行主成分分析（PCA）
+'''
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt

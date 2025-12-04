@@ -1,3 +1,9 @@
+'''
+本模块用于计算资产的协方差矩阵
+'''
+
+
+
 import pandas as pd
 import numpy as np
 
