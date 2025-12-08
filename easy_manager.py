@@ -68,7 +68,9 @@ class EasyManager:
                  user: str = "postgres", 
                  password: str = "cbw88982449",
                  host: str = "localhost",
-                 port: str = "5432"):
+                 port: str = "5432",
+                 logger_path: str = './',
+                 logger_filename: str = 'datadeal'):
         """
         初始化数据库连接
         
@@ -79,7 +81,7 @@ class EasyManager:
             host: 主机地址
             port: 端口号
         """
-        self.logger = logger_util.setup_logger("datadeal",'./')
+        self.logger = logger_util.setup_logger(logger_filename,logger_path)
         self.db_config = {
             'database': database,
             'user': user,
