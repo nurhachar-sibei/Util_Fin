@@ -6,6 +6,7 @@ Author: Nurhachar
 Date: 2025
 """
 
+from pickle import GLOBAL
 import numpy as np
 import pandas as pd
 import psycopg2
@@ -31,14 +32,13 @@ print("Easy Manager is running...")
 #         logging.StreamHandler()
 #     ]
 # )
-
 def function_timer(func):
     """
     函数计时装饰器
     """
     @wraps(func)
     def wrapper(*args, **kwargs):
-        logger = logger_util.setup_logger('datadeal','./')
+        logger = logger_util.setup_logger('time_cal','./log')
         logger.info(f'[Function: {func.__name__} started...]')
         start_time = time.time()
         
@@ -53,16 +53,12 @@ def function_timer(func):
             elapsed_time = end_time - start_time
             logger.error(f'[Function: {func.__name__} failed after {elapsed_time:.2f}s, error: {str(e)}]')
             raise
-    
     return wrapper
-
-
 class EasyManager:
     """
     简易PostgreSQL数据管理类
     支持创建表格、插入数据（去重）、删除表格、导入表格等操作
     """
-    
     def __init__(self, 
                  database: str = "test_data_base",
                  user: str = "postgres", 
@@ -70,7 +66,7 @@ class EasyManager:
                  host: str = "localhost",
                  port: str = "5432",
                  logger_path: str = './',
-                 logger_filename: str = 'datadeal'):
+                 logger_filename: str = "datadeal"):
         """
         初始化数据库连接
         
@@ -94,6 +90,7 @@ class EasyManager:
         self.cursor = None
         self._connect()
     
+
     def _connect(self):
         """建立数据库连接"""
         try:
