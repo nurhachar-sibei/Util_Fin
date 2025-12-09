@@ -1,333 +1,198 @@
 # Financial Analysis Toolkit (Util_Fin)
 
-## Project Overview
+## Overview
 
-This project is a comprehensive financial analysis toolkit that has evolved from an initial volatility calculation tool. It now encompasses a complete suite of financial analysis capabilities, including covariance matrix calculations, Principal Component Analysis (PCA), strategy evaluation analysis, and position management. The toolkit is designed for financial risk management, portfolio optimization, quantitative analysis, and various other financial applications.
+Util_Fin is a collection of reusable utilities that cover the full workflow of quantitative research: fetching market data, building risk models, evaluating strategies, managing rebalancing rules, and persisting results in a database. Each module can run independently, yet they work best when chained together to form a “data ➝ modeling ➝ backtest ➝ evaluation ➝ storage” loop tailored to your own process.
 
-## Evolution History
+## Module Catalog
 
-This project initially focused on volatility calculations, providing multiple covariance matrix calculation methods. As financial analysis requirements continued to evolve, the project gradually expanded to include Principal Component Analysis functionality, strategy evaluation analysis tools, and position management tools, forming a more complete financial analysis ecosystem.
+| Module | Highlights | Typical Use |
+| --- | --- | --- |
+| `Wind_util.py` | Wrapper around WindPy for OHLC/factor download, local cache maintenance, quick plots | Build/refresh local price libraries |
+| `Volatility_util.py` | 9 covariance / semi-covariance models with unified interface | Risk modeling, portfolio optimization, risk parity |
+| `PCAanalysis.py` | PCA with standardization, validation, metrics, and visualizations | Factor reduction, correlation diagnostics |
+| `eval_module.py` | Performance dashboard, risk metrics, annual/monthly drill-down, report export | Strategy evaluation, risk review |
+| `Eval_util.py` | Legacy evaluation helpers (kept for compatibility) | Legacy scripts |
+| `Position_util.py` | Generate calendar-based or fixed-interval rebalancing dates | Backtest scheduling |
+| `Dynamic_weight.py` | Track how weights drift with price moves | Weight risk control, attribution |
+| `EWMA_weight_show.py` | Analyze/visualize EWMA weight decay under different λ | Tune decay parameters |
+| `RP_solo_ver2_3.py` | Full risk-parity modeling, backtest, visualization, evaluation | Multi-asset allocation |
+| `easy_manager.py` | PostgreSQL helper (EasyManager) plus panel-data oriented LongManager | Research data warehouse |
+| `logger_util.py` | Shared logger factory (console + file) | Consistent logging across scripts |
 
-## Core Modules
+## Feature Highlights
 
-### 1. Covariance Matrix Calculator (Volatility_util.py)
+### Data acquisition – `Wind_util.py`
+- Batch download multiple tickers and factors from Wind, returning clean `DataFrame`s.
+- `update_hfq_price` and `add_new_asset` maintain Excel-based price stores.
+- Built-in line/hist/heatmap plots for quick QA.
 
-Provides multiple covariance matrix calculation methods, serving as a fundamental tool for risk management and portfolio optimization.
+```python
+from Wind_util import get_hfq_price, get_return_df
 
-### 2. PCA Analyzer (PCAanalysis.py)
+codes = ['000300.SH', '000905.SH']
+prices = get_hfq_price(codes, '2018-01-01', '2024-12-31')
+returns = get_return_df(prices)
+```
 
-A full-featured Principal Component Analysis tool supporting dimensionality reduction analysis and visualization for multiple time series.
+### Volatility & risk models – `Volatility_util.py`
+- `Cov_Matrix` exposes sample, half-life, diagonal, Ledoit-Wolf shrinkage, threshold, EWMA, GARCH, (EWMA) semi-covariance and more.
+- All models share the method `calculate_cal_cov_matrix`, making it easy to swap risk models inside any optimizer or backtest.
 
-### 3. Strategy Evaluation Analysis Tool (Eval_util.py)
+### Dimensionality reduction – `PCAanalysis.py`
+- Handles data validation, standardization, PCA fitting, explained-variance metrics, component heatmaps/biplots, and Excel export.
 
-Provides comprehensive investment strategy backtesting evaluation metrics calculation and risk analysis functionality.
+### Strategy evaluation – `eval_module.py`
+- `PerformanceEvaluator`: cumulative return, annual return/vol, max drawdown, Sharpe, Calmar, Sortino, terminal NAV, multi-portfolio comparison.
+- `RiskAnalyzer`: historical/parametric VaR, CVaR, rolling drawdown, risk sampling helpers.
+- `PeriodAnalyzer`: yearly/monthly breakdown with historical-window VaR forecasts and investable-capital estimation.
+- `ReportGenerator`: consolidate tables/figures into Excel or Markdown reports.
+- The legacy `Eval_util.py` remains for older notebooks/scripts.
 
-### 4. Position Management Tool (Position_util.py)
+```python
+from eval_module import PerformanceEvaluator, RiskAnalyzer, PeriodAnalyzer
 
-Provides flexible position adjustment and time management functionality, supporting multiple rebalancing strategies.
+nav = strategy_df['nav']
+summary = PerformanceEvaluator.evaluate_portfolio(nav, name='Alpha')
+rolling = RiskAnalyzer.calculate_rolling_drawdown(nav.pct_change().fillna(0))
+annual = PeriodAnalyzer.annual_analysis(nav.pct_change().fillna(0))
+```
 
-## Features
+### Portfolio management & backtesting
 
-### Covariance Matrix Calculation (Volatility_util.py)
+- **`Position_util.py`**: generate rebalancing dates by stride (e.g., every 20 trading days), by explicit month/day, or by pandas frequency strings such as `'M'` and `'W-FRI'`.
+- **`Dynamic_weight.py`**: simulate how weights drift between rebalancing dates and stitch multiple windows together.
+- **`EWMA_weight_show.py`**: inspect decay curves under various λ, plot weight heatmaps, measure concentration/effective lookback.
+- **`RP_solo_ver2_3.py`**: `RPmodel` glues Wind data, covariance engines, risk-budget solvers (naive, PCA-based, LASSO-based), leverage/cash-cost settings, analytics, visualization, and evaluation.
 
-Supports 9 different covariance matrix calculation methods:
+```python
+from Dynamic_weight import calculate_dynamic_weight
+daily_weight = calculate_dynamic_weight(hold_df=ret_df, init_weight=init_w, init_date=ret_df.index[0])
 
-1. **Sample Covariance (ALL)** - Traditional sample covariance matrix calculation
-2. **Half-life Covariance (HALF)** - Covariance calculation based on time-decay weights
-3. **Diagonal Covariance (DIAG)** - Covariance matrix retaining only diagonal variances
-4. **Shrinkage Covariance (SPRING)** - Covariance matrix based on Ledoit-Wolf shrinkage estimation
-5. **Threshold Covariance (THRESH)** - Threshold-filtered covariance matrix
-6. **EWMA Covariance (EWMA)** - Exponentially Weighted Moving Average covariance matrix
-7. **GARCH Covariance (GARCH)** - Conditional covariance matrix based on GARCH model
-8. **Semi-covariance (SEMI)** - Semi-covariance matrix for downside risk
-9. **EWMA Semi-covariance (EWMA_SEMI)** - Exponentially Weighted Moving Average semi-covariance matrix
+from RP_solo_ver2_3 import RPmodel
+rp = RPmodel(ret_df, start_date='2021-01-01', end_date='2024-12-31',
+             cov_matrix_method='EWMA_SEMI', change_time_delta=20)
+rp.position_get(M=1, D=1)
+rp.Backtest()
+rp.get_eval()
+```
 
-### PCA Analyzer (PCAanalysis.py)
+### Data infrastructure – `easy_manager.py` & `logger_util.py`
 
-Provides comprehensive Principal Component Analysis functionality:
+- **EasyManager**: connect to PostgreSQL, infer column types from `DataFrame`s, create tables, batch insert, add columns, deduplicate inserts (`mode='skip'/'update'/'append'`), load tables, inspect schemas. Comes with a `function_timer` decorator that logs runtime through `logger_util`.
+- **LongManager**: inherits EasyManager, enforces (time, entity) composite keys for panel data, auto-creates multi-column indexes, and ensures time column comes first.
+- **logger_util**: `setup_logger` builds reusable console/file loggers so every tool writes consistent audit trails.
 
-- **Data Preprocessing**: Automatic standardization and data validation
-- **PCA Decomposition**: Flexible principal component number settings
-- **Statistical Metrics**: Explained variance ratio, cumulative variance ratio, feature contributions, etc.
-- **Visualization**: Explained variance plots, component heatmaps, biplots, etc.
-- **Results Export**: Support for multiple output formats
-- **Reconstruction Error**: Model quality assessment
+```python
+from easy_manager import EasyManager, LongManager
 
-### Strategy Evaluation Analysis Tool (Eval_util.py)
+with EasyManager(database='research') as em:
+    em.create_table('factor_snapshot', df, overwrite=True)
+    em.insert_data('factor_snapshot', incr_df, mode='update')
 
-Provides comprehensive investment strategy backtesting evaluation functionality:
-
-- **Basic Metrics Calculation**: Cumulative returns, annualized returns, annualized volatility, maximum drawdown
-- **Risk-Adjusted Metrics**: Sharpe ratio, Calmar ratio, etc.
-- **Rolling Analysis**: Rolling cumulative returns, rolling drawdown analysis
-- **VaR Risk Analysis**: Value at Risk (VaR) calculation using historical simulation method
-- **Annual Analysis**: Annual risk-return metrics statistics
-- **Monthly Analysis**: Monthly risk-return metrics statistics, including monthly win rate calculation
-- **Investment Scale Calculation**: Maximum investment scale calculation based on risk control
-- **Results Export**: Detailed analysis reports in Excel format
-
-### Position Management Tool (Position_util.py)
-
-Provides flexible position adjustment and time management functionality:
-
-- **Multiple Rebalancing Modes**: Support for fixed-date rebalancing and fixed-interval rebalancing
-- **Time Series Processing**: Automatic handling of opening and closing time ranges
-- **Rebalancing Date Generation**: Intelligent generation of rebalancing time points
-- **Data Filtering**: Data filtering based on rebalancing strategies
-- **Flexible Configuration**: Support for annual, monthly, weekly, daily, and other rebalancing frequencies
+with LongManager(time_col='trade_date', entity_col='ticker') as lm:
+    lm.create_table('factor_panel', panel_df)
+```
 
 ## Dependencies
 
-```python
-# Basic data processing
-import pandas as pd
-import numpy as np
-
-# Machine learning and statistics
-from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler
-from sklearn.datasets import load_iris
-from sklearn.covariance import LedoitWolf
-
-# Financial modeling
-from arch import arch_model
-from pypfopt.risk_models import semicovariance
-
-# Visualization
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-# Others
-from scipy import stats
-from typing import Optional, Union, List, Tuple, Dict
-```
-
-## Installation
+Install the common Python stack:
 
 ```bash
-pip install pandas numpy scikit-learn matplotlib seaborn arch pypfopt scipy
+pip install pandas numpy scipy scikit-learn matplotlib seaborn arch pypfopt tqdm tabulate
 ```
 
-## Usage
+Optional/extra:
+- `WindPy` (from the Wind terminal) for `Wind_util.py`.
+- `psycopg2-binary` for PostgreSQL access.
+- `pywin32` and other Windows components when interacting with Excel/Wind.
 
-### Covariance Matrix Calculation
+## Quick Start Recipes
 
+### Covariance matrix
 ```python
-import pandas as pd
 from Volatility_util import Cov_Matrix
 
-# Prepare returns data
-returns_data = pd.DataFrame(...)  # Your returns data
-
-# Create covariance matrix calculator instance
-cov_calculator = Cov_Matrix(ret=returns_data, method='ALL')
-
-# Calculate covariance matrix
-cov_matrix = cov_calculator.calculate_cal_cov_matrix(frequency=252)
+cov = Cov_Matrix(ret_df, method='EWMA').calculate_cal_cov_matrix(frequency=252, lambda_=0.94)
 ```
 
-### PCA Analysis
-
+### PCA
 ```python
-import pandas as pd
 from PCAanalysis import PCAAnalyzer
 
-# Prepare data
-data = pd.DataFrame(...)  # Your time series data
-
-# Create PCA analyzer
-pca_analyzer = PCAAnalyzer(standardize=True, n_components=None)
-
-# Fit the model
-pca_analyzer.fit(data)
-
-# Get analysis results
-explained_variance = pca_analyzer.get_explained_variance_ratio()
-components_matrix = pca_analyzer.get_components_matrix()
-
-# Visualization
-pca_analyzer.plot_explained_variance()
-pca_analyzer.plot_components_heatmap()
-pca_analyzer.plot_biplot()
-
-# Export results
-pca_analyzer.export_results('pca_results.xlsx')
+pca = PCAAnalyzer(standardize=True).fit(ret_df)
+pca.plot_explained_variance()
+pca.export_results('pca_results.xlsx')
 ```
 
-### Strategy Evaluation Analysis
-
+### Performance report
 ```python
-import pandas as pd
-from Eval_util import get_eval_indicator, Year_analysis, Month_analysis
+from eval_module import PerformanceEvaluator, ReportGenerator
 
-# Prepare returns data
-returns_data = pd.DataFrame(...)  # Your strategy returns data
-
-# Calculate basic evaluation indicators
-eval_indicators = get_eval_indicator(returns_data)
-print(eval_indicators)
-
-# Perform annual analysis (including VaR analysis)
-annual_analysis = Year_analysis(returns_data, dafult_VaR_year_windows=5, save_=True)
-
-# Perform monthly analysis (including VaR analysis and monthly win rate)
-monthly_analysis = Month_analysis(returns_data, dafult_VaR_year_windows=5, save_=True)
+dashboard = PerformanceEvaluator.evaluate_multi_portfolios({
+    'Alpha': nav_alpha, 'Beta': nav_beta
+})
+ReportGenerator(dashboard, output_dir='./report').export_excel()
 ```
 
-### Position Management
-
+### Risk-parity backtest
 ```python
-import pandas as pd
-from Position_util import Position_info
+from RP_solo_ver2_3 import RPmodel
 
-# Prepare data
-total_df = pd.DataFrame(...)  # Your returns data
-start_date = '2020-01-01'
-end_date = '2023-12-31'
-
-# Create position management instance
-position_manager = Position_info(
-    total_df=total_df,
-    start_date=start_date,
-    end_date=end_date,
-    change_time_delta=20,  # Rebalance every 20 trading days
-    initial_month=1,
-    initial_day=1
-)
-
-# Get rebalancing information
-position_df, change_position_df, change_dates = position_manager.position_information()
+rp = RPmodel(ret_df, change_time_delta=15, cov_matrix_method='SPRING')
+rp.position_get(M=1, D=5)
+rp.Backtest()
+rp.plot_pv({'RP': rp.result_rp, 'BM': rp.result_benchmark})
 ```
 
-### Examples with Different Methods
-
+### Database ingestion
 ```python
-# 1. Sample Covariance
-cov_sample = Cov_Matrix(returns_data, 'ALL')
-sample_cov = cov_sample.calculate_cal_cov_matrix()
-
-# 2. EWMA Covariance
-cov_ewma = Cov_Matrix(returns_data, 'EWMA')
-ewma_cov = cov_ewma.calculate_cal_cov_matrix()
-
-# 3. GARCH Covariance
-cov_garch = Cov_Matrix(returns_data, 'GARCH')
-garch_cov = cov_garch.calculate_cal_cov_matrix()
-
-# 4. Semi-covariance
-cov_semi = Cov_Matrix(returns_data, 'SEMI')
-semi_cov = cov_semi.calculate_cal_cov_matrix()
+with EasyManager(database='macro_data_base') as em:
+    em.create_table('macro_raw', macro_df, overwrite=True)
+    em.add_columns('macro_raw', extra_df)
+    snapshot = em.load_table('macro_raw', limit=1000)
 ```
 
-## Method Details
+### EWMA weight visualization
+```python
+from EWMA_weight_show import EWMAWeightVisualizer
 
-### 1. Sample Covariance (ALL)
-
-Calculates traditional sample covariance matrix with annualization.
-
-### 2. Half-life Covariance (HALF)
-
-Divides data into 4 subsets and assigns different weights to different time periods, achieving time decay effects.
-
-### 3. Diagonal Covariance (DIAG)
-
-Retains only diagonal elements (variances) of the covariance matrix, assuming no correlation between assets.
-
-### 4. Shrinkage Covariance (SPRING)
-
-Uses Ledoit-Wolf shrinkage estimation method to find optimal balance between sample covariance and structured estimation.
-
-### 5. Threshold Covariance (THRESH)
-
-Sets threshold to filter out smaller covariance values, retaining main correlation structure.
-
-### 6. EWMA Covariance (EWMA)
-
-Uses exponentially weighted moving average method, assigning higher weights to recent data.
-
-### 7. GARCH Covariance (GARCH)
-
-Calculates conditional covariance matrix based on GARCH(1,1) model, capturing volatility clustering effects.
-
-### 8. Semi-covariance (SEMI)
-
-Considers only downside risk covariance calculation, suitable for risk-averse investment scenarios.
-
-### 9. EWMA Semi-covariance (EWMA_SEMI)
-
-Combines advantages of EWMA and semi-covariance, performing time-weighted calculation for downside risk.
-
-## Parameters
-
-- `ret`: Returns data (pandas DataFrame)
-- `method`: Covariance calculation method (string)
-- `frequency`: Annualization frequency, default is 252 (trading days)
-- `lambda_`: Decay factor in EWMA method, default is 0.84
-- `threshold`: Filter threshold in threshold method, default is 0.03
-
-## Important Notes
-
-1. Input data should be properly formatted pandas DataFrames
-2. Ensure data quality by handling missing values and outliers
-3. GARCH method is computationally intensive, suitable for small to medium datasets
-4. Data standardization is recommended before PCA analysis
-5. Choose appropriate covariance calculation methods based on specific use cases
-
-## Contributing
-
-We welcome issue reports, feature requests, and code contributions. Please ensure:
-- Code follows project style guidelines
-- Appropriate documentation and comments are included
-- Necessary test cases are provided
-
-## License
-
-This project is released under an open-source license. Please refer to the LICENSE file in the project root directory for details.
-
-## Application Scenarios
-
-### Risk Management
-- Portfolio risk assessment
-- Stress testing and scenario analysis
-- Risk factor identification
-
-### Portfolio Optimization
-- Asset allocation optimization
-- Risk parity strategies
-- Factor investing
-
-### Quantitative Analysis
-- Multi-factor model construction
-- Dimensionality reduction analysis
-- Exploratory data analysis
-- Strategy backtesting evaluation
-- Investment performance analysis
-
-### Financial Modeling
-- Derivatives pricing
-- Risk model construction
-- Market microstructure analysis
-- Position management optimization
+viz = EWMAWeightVisualizer()
+viz.plot_multiple_lambda_weights(n_days=120, lambda_values=[0.86, 0.92, 0.97])
+```
 
 ## Project Structure
 
 ```
 Util_Fin/
-├── PCAanalysis.py      # PCA analyzer main module
-├── Volatility_util.py  # Covariance matrix calculation utility
-├── Eval_util.py        # Strategy evaluation analysis tool
-├── Position_util.py    # Position management tool
-├── README.md          # Chinese documentation
-└── README_EN.md       # English documentation
+├── Dynamic_weight.py       # Weight drift calculator
+├── easy_manager.py         # PostgreSQL helpers (EasyManager / LongManager)
+├── eval_module.py          # Modern evaluation toolkit
+├── Eval_util.py            # Legacy evaluation helpers
+├── EWMA_weight_show.py     # EWMA weight visualization
+├── logger_util.py          # Logger factory
+├── PCAanalysis.py          # PCA analyzer
+├── Position_util.py        # Rebalancing calendar manager
+├── RP_solo_ver2_3.py       # Risk-parity engine
+├── Volatility_util.py      # Covariance/risk models
+├── Wind_util.py            # Wind data interface
+├── README.md               # Chinese documentation
+└── README_EN.md            # English documentation
 ```
 
 ## Version History
 
-- **v1.0**: Basic volatility calculation tool
-- **v2.0**: Added multiple covariance matrix calculation methods
-- **v3.0**: Added PCA analysis functionality, forming a complete financial analysis toolkit
-- **v4.0**: Added strategy evaluation analysis and position management functionality, building a comprehensive quantitative analysis platform
+- **v5.0**: Added database helpers, the new evaluation module, weight-visualization tools, logger utilities, and refreshed the risk-parity engine.
+- **v4.0**: Introduced strategy evaluation (legacy) and position management.
+- **v3.0**: Added PCA analysis to complete the research pipeline.
+- **v2.0**: Extended the volatility toolkit with multiple covariance estimators.
+- **v1.0**: Initial volatility calculator.
 
----
+## Use Cases
 
-*For more detailed information, please refer to the Chinese version README: [README.md](README.md)*
+- **Risk management**: multi-model VaR, rolling drawdown dashboards, investable-capital estimation.
+- **Asset allocation / risk parity**: covariance modeling + RPmodel + dynamic-weight inspection.
+- **Quant research**: PCA for factor compression, backtest evaluation, EWMA decay diagnostics.
+- **Data engineering**: fetch from Wind, store/update in PostgreSQL, keep unified logs.
+
+Mix any subset of the modules to create your own workflow, and plug in additional analytics when needed.
