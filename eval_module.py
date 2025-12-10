@@ -527,8 +527,8 @@ class ReportGenerator:
         if not os.path.exists(filepath):
             os.makedirs(filepath)
         
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        filename = f"{filename_prefix}_{timestamp}.xlsx"
+        # timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"{filename_prefix}.xlsx"
         full_path = os.path.join(filepath, filename)
         
         with pd.ExcelWriter(full_path, engine='openpyxl') as writer:
